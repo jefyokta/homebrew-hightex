@@ -9,6 +9,7 @@ a local-first desktop document editor for academic writing.
 
 ```sh
 brew tap jefyokta/hightex
+brew trust jefyokta/hightex
 brew install --cask hightex   # macOS
 brew install hightex          # Linux
 ```
@@ -47,8 +48,6 @@ For pinned installs, `hightex update` is a no-op by design.
 ```sh
 brew uninstall --cask hightex          # macOS, latest
 brew uninstall hightex                 # Linux, latest
-brew uninstall --cask hightex@0.0.9    # macOS, pinned
-brew uninstall hightex@0.0.9           # Linux, pinned
 ```
 
 ## Troubleshooting

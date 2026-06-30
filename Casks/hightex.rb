@@ -17,17 +17,24 @@ cask "hightex" do
 
   app "HighTex.app"
 
-  bin = "#{HOMEBREW_PREFIX}/bin/hightex"
-  binary "#{staged_path}/bin/hightex", target: bin
-
   postflight do
     system_command "/usr/bin/xattr",
       args: ["-cr", "#{appdir}/HighTex.app"],
       sudo: false
+
+    bin_dir = "#{HOMEBREW_PREFIX}/bin"
+    FileUtils.mkdir_p(bin_dir)
+    FileUtils.cp(
+      "#{Tap.fetch("jefyokta", "hightex").path}/bin/hightex",
+      "#{bin_dir}/hightex"
+    )
+    FileUtils.chmod(0755, "#{bin_dir}/hightex")
   end
 
-  uninstall delete: "#{HOMEBREW_PREFIX}/bin/hightex"
-
+  uninstall_postflight do
+    FileUtils.rm_f("#{HOMEBREW_PREFIX}/bin/hightex")
+  end
+  
   zap trash: [
     "~/Library/Application Support/hightex-desktop",
     "~/Library/Application Support/HighTex",
