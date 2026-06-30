@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+# hightex - CLI companion for HighTex Desktop
+#
+# Usage:
+#   hightex update      Check for updates and install if available
+#   hightex version     Print the current installed version
+#   hightex help        Print this help message
+
+set -euo pipefail
+
+OWNER="jefyokta"
+REPO="hightex-desktop"
+API="https://api.github.com/repos/${OWNER}/${REPO}/releases/latest"
+
+# Resolve the installed version from the app bundle (macOS) or libexec marker (Linux)
+_installed_version() {
+  if [[ "$(uname)" == "Darwin" ]]; then
+    local plist="/Applications/HighTex.app/Contents/Info.plist"
+    if [[ -f "$plist" ]]; then
+      /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$plist" 2>/dev/null || echo "unknown"
+    else
+      echo "unknown"
+    fi
+  else
+    local marker
+    marker="$(dirname "$(dirname "$(realpath "$0")")")/libexec/.hightex-version"
+    if [[ -f "$marker" ]]; then
+      cat "$marker"
+    else
+      echo "unknown"
+    fi
+  fi
+}
+
+# Fetch the latest release tag from GitHub API
+_latest_version() {
+  curl -fsSL "$API" | grep '"tag_name"' | sed 's/.*"tag_name": *"v\([^"]*\)".*/\1/'
+}
+
+# Compare two semver strings, return 0 if $1 < $2
+_version_lt() {
+  [[ "$1" != "$2" ]] && \
+    [[ "$(printf '%s\n%s' "$1" "$2" | sort -V | head -1)" == "$1" ]]
+}
+
+# ----------------------------------------------------------------
+# subcommand: update
+# ----------------------------------------------------------------
+cmd_update() {
+  # If this binary was installed as a pinned version (hightex@X.Y.Z), refuse
+  # to auto-update — pinned installs are meant to stay frozen at that version.
+  local self_name
+  self_name="$(basename "$0")"
+  if [[ "$self_name" == hightex@* ]]; then
+    echo "This is a pinned install (${self_name}) and will not auto-update."
+    echo "To get the latest version instead, install the unpinned formula:"
+    echo "  brew install --cask hightex   # macOS"
+    echo "  brew install hightex          # Linux"
+    exit 0
+  fi
+
+  echo "Checking for updates..."
+
+  local current latest
+  current="$(_installed_version)"
+  latest="$(_latest_version)"
+
+  if [[ -z "$latest" ]]; then
+    echo "error: could not reach GitHub API. Check your connection." >&2
+    exit 1
+  fi
+
+  echo "Installed : ${current}"
+  echo "Latest    : ${latest}"
+
+  if [[ "$current" == "$latest" ]]; then
+    echo "Already up to date."
+    exit 0
+  fi
+
+  if ! _version_lt "$current" "$latest"; then
+    echo "Already up to date."
+    exit 0
+  fi
+
+  echo "Update available: ${current} -> ${latest}"
+  read -r -p "Install now? [y/N] " confirm
+  [[ "${confirm,,}" == "y" ]] || { echo "Aborted."; exit 0; }
+
+  local tag="v${latest}"
+  local tmp
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "$tmp"' EXIT
+
+  if [[ "$(uname)" == "Darwin" ]]; then
+    _update_mac "$tag" "$latest" "$tmp"
+  else
+    _update_linux "$tag" "$latest" "$tmp"
+  fi
+
+  echo "HighTex updated to ${latest}."
+}
+
+# ----------------------------------------------------------------
+# macOS update: download DMG, mount, copy .app, strip quarantine
+# ----------------------------------------------------------------
+_update_mac() {
+  local tag="$1" version="$2" tmp="$3"
+  local dmg="${tmp}/HighTex.dmg"
+  local url="https://github.com/${OWNER}/${REPO}/releases/download/${tag}/HighTex-Mac-${version}-Installer.dmg"
+
+  echo "Downloading ${url}..."
+  curl -L --progress-bar "$url" -o "$dmg"
+
+  echo "Mounting disk image..."
+  local mountpoint
+  mountpoint="$(hdiutil attach "$dmg" -nobrowse -noautoopen | grep '/Volumes/' | awk '{print $NF}')"
+
+  echo "Installing HighTex.app..."
+  rm -rf /Applications/HighTex.app
+  cp -R "${mountpoint}/HighTex.app" /Applications/HighTex.app
+
+  echo "Removing quarantine attribute..."
+  xattr -cr /Applications/HighTex.app 2>/dev/null || true
+
+  hdiutil detach "$mountpoint" -quiet
+}
+
+# ----------------------------------------------------------------
+# Linux update: download AppImage, replace in libexec, write version marker
+# ----------------------------------------------------------------
+_update_linux() {
+  local tag="$1" version="$2" tmp="$3"
+  local appimage="${tmp}/HighTex.AppImage"
+  local url="https://github.com/${OWNER}/${REPO}/releases/download/${tag}/HighTex-Linux-${version}.AppImage"
+  local libexec
+  libexec="$(dirname "$(dirname "$(realpath "$0")")")/libexec"
+
+  echo "Downloading ${url}..."
+  curl -L --progress-bar "$url" -o "$appimage"
+  chmod 0755 "$appimage"
+
+  echo "Installing..."
+  mv "$appimage" "${libexec}/HighTex.AppImage"
+  echo "$version" > "${libexec}/.hightex-version"
+}
+
+# ----------------------------------------------------------------
+# subcommand: version
+# ----------------------------------------------------------------
+cmd_version() {
+  local current
+  current="$(_installed_version)"
+  echo "HighTex ${current}"
+}
+
+# ----------------------------------------------------------------
+# subcommand: help
+# ----------------------------------------------------------------
+cmd_help() {
+  cat <<EOF
+hightex - CLI companion for HighTex Desktop
+
+Usage:
+  hightex <command>
+
+Commands:
+  update     Check for a newer release and install it (no-op on pinned installs)
+  version    Print the current installed version
+  help       Print this help message
+EOF
+}
+
+# ----------------------------------------------------------------
+# dispatch
+# ----------------------------------------------------------------
+case "${1:-help}" in
+  update)  cmd_update  ;;
+  version) cmd_version ;;
+  help|--help|-h) cmd_help ;;
+  *)
+    echo "error: unknown command '${1}'. Run 'hightex help' for usage." >&2
+    exit 1
+    ;;
+esac
