@@ -11,7 +11,7 @@ class Hightex < Formula
 
   on_linux do
     url "https://github.com/jefyokta/hightex-desktop/releases/download/v#{version}/HighTex-Linux-#{version}.AppImage"
-    sha256 "FILL_SHA256_APPIMAGE"
+    sha256 "1035e1c7295696491d4c8ac984a20ab45ef73259c7b23bb5080216b24639e009"
   end
 
   on_macos do

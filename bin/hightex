@@ -1,18 +1,10 @@
 #!/usr/bin/env bash
-# hightex - CLI companion for HighTex Desktop
-#
-# Usage:
-#   hightex update      Check for updates and install if available
-#   hightex version     Print the current installed version
-#   hightex help        Print this help message
-
 set -euo pipefail
 
 OWNER="jefyokta"
 REPO="hightex-desktop"
 API="https://api.github.com/repos/${OWNER}/${REPO}/releases/latest"
 
-# Resolve the installed version from the app bundle (macOS) or libexec marker (Linux)
 _installed_version() {
   if [[ "$(uname)" == "Darwin" ]]; then
     local plist="/Applications/HighTex.app/Contents/Info.plist"
@@ -32,23 +24,36 @@ _installed_version() {
   fi
 }
 
-# Fetch the latest release tag from GitHub API
 _latest_version() {
   curl -fsSL "$API" | grep '"tag_name"' | sed 's/.*"tag_name": *"v\([^"]*\)".*/\1/'
 }
 
-# Compare two semver strings, return 0 if $1 < $2
 _version_lt() {
   [[ "$1" != "$2" ]] && \
     [[ "$(printf '%s\n%s' "$1" "$2" | sort -V | head -1)" == "$1" ]]
 }
 
-# ----------------------------------------------------------------
-# subcommand: update
-# ----------------------------------------------------------------
+cmd_open() {
+  if [[ "$(uname)" == "Darwin" ]]; then
+    if [[ ! -d "/Applications/HighTex.app" ]]; then
+      echo "error: HighTex.app not found in /Applications." >&2
+      exit 1
+    fi
+    open -a "/Applications/HighTex.app"
+  else
+    local libexec
+    libexec="$(dirname "$(dirname "$(realpath "$0")")")/libexec"
+    local appimage="${libexec}/HighTex.AppImage"
+    if [[ ! -x "$appimage" ]]; then
+      echo "error: HighTex.AppImage not found at ${appimage}." >&2
+      exit 1
+    fi
+    nohup "$appimage" >/dev/null 2>&1 &
+    disown
+  fi
+}
+
 cmd_update() {
-  # If this binary was installed as a pinned version (hightex@X.Y.Z), refuse
-  # to auto-update — pinned installs are meant to stay frozen at that version.
   local self_name
   self_name="$(basename "$0")"
   if [[ "$self_name" == hightex@* ]]; then
@@ -101,9 +106,6 @@ cmd_update() {
   echo "HighTex updated to ${latest}."
 }
 
-# ----------------------------------------------------------------
-# macOS update: download DMG, mount, copy .app, strip quarantine
-# ----------------------------------------------------------------
 _update_mac() {
   local tag="$1" version="$2" tmp="$3"
   local dmg="${tmp}/HighTex.dmg"
@@ -126,9 +128,6 @@ _update_mac() {
   hdiutil detach "$mountpoint" -quiet
 }
 
-# ----------------------------------------------------------------
-# Linux update: download AppImage, replace in libexec, write version marker
-# ----------------------------------------------------------------
 _update_linux() {
   local tag="$1" version="$2" tmp="$3"
   local appimage="${tmp}/HighTex.AppImage"
@@ -145,23 +144,18 @@ _update_linux() {
   echo "$version" > "${libexec}/.hightex-version"
 }
 
-# ----------------------------------------------------------------
-# subcommand: version
-# ----------------------------------------------------------------
 cmd_version() {
   local current
   current="$(_installed_version)"
   echo "HighTex ${current}"
 }
 
-# ----------------------------------------------------------------
-# subcommand: help
-# ----------------------------------------------------------------
 cmd_help() {
   cat <<EOF
 hightex - CLI companion for HighTex Desktop
 
 Usage:
+  hightex             Open HighTex
   hightex <command>
 
 Commands:
@@ -171,10 +165,8 @@ Commands:
 EOF
 }
 
-# ----------------------------------------------------------------
-# dispatch
-# ----------------------------------------------------------------
-case "${1:-help}" in
+case "${1:-open}" in
+  open)    cmd_open    ;;
   update)  cmd_update  ;;
   version) cmd_version ;;
   help|--help|-h) cmd_help ;;

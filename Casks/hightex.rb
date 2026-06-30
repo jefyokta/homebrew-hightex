@@ -2,16 +2,12 @@ cask "hightex" do
   version "0.0.10"
 
   url "https://github.com/jefyokta/hightex-desktop/releases/download/v#{version}/HighTex-Mac-#{version}-Installer.dmg"
-  sha256 "FILL_SHA256_DMG"
+  sha256 "64d2ce2429d713e2c78d0cc4b84f62973517e2f606fcdf2dbadde60b3ca6b2bf"
 
   name "HighTex"
   desc "Desktop document editor for academic writing"
   homepage "https://github.com/jefyokta/hightex-desktop"
 
-  # Always resolves to the newest tag on GitHub. `brew install --cask hightex`
-  # with no version pulls this automatically; `brew bump-cask-pr` or
-  # `brew livecheck hightex` will pick up new releases without manual edits
-  # beyond updating the sha256 (see update-tap.sh).
   livecheck do
     url :url
     strategy :github_latest
