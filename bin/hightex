@@ -1,9 +1,38 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+CLI_VERSION="0.0.1"
+CLI_SERVER="${HIGHTEX_SERVER:-https://hightex.jefyokta.my.id}"
 OWNER="jefyokta"
 REPO="hightex-desktop"
 API="https://api.github.com/repos/${OWNER}/${REPO}/releases/latest"
+
+if [[ -t 1 ]] && [[ -z "${NO_COLOR:-}" ]]; then
+  C_RESET=$'\033[0m'
+  C_BOLD=$'\033[1m'
+  C_DIM=$'\033[2m'
+  C_RED=$'\033[31m'
+  C_GREEN=$'\033[32m'
+  C_YELLOW=$'\033[33m'
+  C_CYAN=$'\033[36m'
+else
+  C_RESET='' C_BOLD='' C_DIM='' C_RED='' C_GREEN='' C_YELLOW='' C_CYAN=''
+fi
+
+_err() { printf '%s%s%s\n' "$C_RED" "$*" "$C_RESET" >&2; }
+_warn() { printf '%s%s%s\n' "$C_YELLOW" "$*" "$C_RESET" >&2; }
+_ok() { printf '%s%s%s\n' "$C_GREEN" "$*" "$C_RESET"; }
+_info() { printf '%s%s%s\n' "$C_DIM" "$*" "$C_RESET"; }
+
+_executeable() {
+  if [[ "$(uname)" == "Darwin" ]]; then
+    echo "/Applications/HighTex.app/Contents/MacOS/HighTex"
+  else
+    local libexec
+    libexec="$(dirname "$(dirname "$(realpath "$0")")")/libexec"
+    echo "${libexec}/HighTex.AppImage"
+  fi
+}
 
 _installed_version() {
   if [[ "$(uname)" == "Darwin" ]]; then
@@ -16,11 +45,7 @@ _installed_version() {
   else
     local marker
     marker="$(dirname "$(dirname "$(realpath "$0")")")/libexec/.hightex-version"
-    if [[ -f "$marker" ]]; then
-      cat "$marker"
-    else
-      echo "unknown"
-    fi
+    [[ -f "$marker" ]] && cat "$marker" || echo "unknown"
   fi
 }
 
@@ -29,149 +54,331 @@ _latest_version() {
 }
 
 _version_lt() {
-  [[ "$1" != "$2" ]] && \
-    [[ "$(printf '%s\n%s' "$1" "$2" | sort -V | head -1)" == "$1" ]]
+  [[ "$1" != "$2" ]] && [[ "$(printf '%s\n%s' "$1" "$2" | sort -V | head -1)" == "$1" ]]
+}
+
+_list_documents() {
+  local exe="$1"
+  "$exe" documents
+}
+
+_document_exists() {
+  local exe="$1" docId="$2"
+  local id title
+  while IFS=$'\t' read -r id title; do
+    [[ "$id" == "$docId" ]] && return 0
+  done < <(_list_documents "$exe")
+  return 1
+}
+
+MENU_OPTIONS=()
+MENU_IDS=()
+
+_arrow_select() {
+  local count=${#MENU_OPTIONS[@]}
+  local selected=0
+  local key rest first=1 i
+
+  tput civis >&2 2>/dev/null || true
+  trap 'tput cnorm >&2 2>/dev/null || true' RETURN
+
+  while true; do
+    if [[ $first -eq 0 ]]; then
+      printf '\033[%dA' "$count" >&2
+    fi
+    first=0
+
+    for i in "${!MENU_OPTIONS[@]}"; do
+      printf '\033[2K' >&2
+      if [[ $i -eq $selected ]]; then
+        printf '%s%s> %s%s\n' "$C_CYAN" "$C_BOLD" "${MENU_OPTIONS[$i]}" "$C_RESET" >&2
+      else
+        printf '  %s\n' "${MENU_OPTIONS[$i]}" >&2
+      fi
+    done
+
+    IFS= read -rsn1 key
+    if [[ $key == $'\x1b' ]]; then
+      IFS= read -rsn2 rest
+      case "$rest" in
+        '[A') (( selected = (selected - 1 + count) % count )) ;;
+        '[B') (( selected = (selected + 1) % count )) ;;
+      esac
+    elif [[ $key == "k" ]]; then
+      (( selected = (selected - 1 + count) % count ))
+    elif [[ $key == "j" ]]; then
+      (( selected = (selected + 1) % count ))
+    elif [[ -z $key ]]; then
+      break
+    fi
+  done
+
+  echo "$selected"
+}
+
+_select_document() {
+  local exe="$1"
+  local output
+  output="$(_list_documents "$exe")"
+
+  [[ -n "$output" ]] || {
+    _err "error: no documents found"
+    exit 1
+  }
+
+  MENU_OPTIONS=()
+  MENU_IDS=()
+  local id title
+  while IFS=$'\t' read -r id title; do
+    [[ -z "$id" ]] && continue
+    MENU_IDS+=("$id")
+    MENU_OPTIONS+=("$title ($id)")
+  done <<< "$output"
+
+  [[ ${#MENU_IDS[@]} -gt 0 ]] || {
+    _err "error: no documents found"
+    exit 1
+  }
+
+  local idx
+  if [[ -t 0 ]]; then
+    idx="$(_arrow_select)"
+  else
+    PS3="Select document to compile: "
+    local choice
+    select choice in "${MENU_OPTIONS[@]}"; do
+      [[ -n "$choice" ]] && { idx=$((REPLY-1)); break; }
+    done
+  fi
+
+  echo "${MENU_IDS[$idx]}"
 }
 
 cmd_open() {
   if [[ "$(uname)" == "Darwin" ]]; then
-    if [[ ! -d "/Applications/HighTex.app" ]]; then
-      echo "error: HighTex.app not found in /Applications." >&2
-      exit 1
-    fi
     open -a "/Applications/HighTex.app"
   else
-    local libexec
+    local libexec appimage
     libexec="$(dirname "$(dirname "$(realpath "$0")")")/libexec"
-    local appimage="${libexec}/HighTex.AppImage"
-    if [[ ! -x "$appimage" ]]; then
-      echo "error: HighTex.AppImage not found at ${appimage}." >&2
+    appimage="${libexec}/HighTex.AppImage"
+
+    [[ -x "$appimage" ]] || {
+      _err "error: HighTex.AppImage not found"
       exit 1
-    fi
+    }
+
     nohup "$appimage" >/dev/null 2>&1 &
     disown
   fi
 }
 
+normalize_url() {
+  local url="$1"
+  printf '%s' "$url" | sed 's#\\/#/#g'
+}
+
 cmd_update() {
-  local self_name
-  self_name="$(basename "$0")"
-  if [[ "$self_name" == hightex@* ]]; then
-    echo "This is a pinned install (${self_name}) and will not auto-update."
-    echo "To get the latest version instead, install the unpinned formula:"
-    echo "  brew install --cask hightex   # macOS"
-    echo "  brew install hightex          # Linux"
-    exit 0
-  fi
+  echo "Checking HighTex updates..."
 
-  echo "Checking for updates..."
-
-  local current latest
-  current="$(_installed_version)"
+  local installed latest
+  installed="$(_installed_version)"
   latest="$(_latest_version)"
 
   if [[ -z "$latest" ]]; then
-    echo "error: could not reach GitHub API. Check your connection." >&2
+    _err "error: unable to check latest version"
     exit 1
   fi
 
-  echo "Installed : ${current}"
-  echo "Latest    : ${latest}"
+  printf '%sInstalled%s : %s\n' "$C_DIM" "$C_RESET" "$installed"
+  printf '%sLatest%s    : %s\n' "$C_DIM" "$C_RESET" "$latest"
 
-  if [[ "$current" == "$latest" ]]; then
-    echo "Already up to date."
-    exit 0
+  if [[ "$installed" == "unknown" ]]; then
+    _warn "warning: HighTex installation not detected"
+    exit 1
   fi
 
-  if ! _version_lt "$current" "$latest"; then
-    echo "Already up to date."
-    exit 0
-  fi
-
-  echo "Update available: ${current} -> ${latest}"
-  read -r -p "Install now? [y/N] " confirm
-  [[ "${confirm,,}" == "y" ]] || { echo "Aborted."; exit 0; }
-
-  local tag="v${latest}"
-  local tmp
-  tmp="$(mktemp -d)"
-  trap 'rm -rf "$tmp"' EXIT
-
-  if [[ "$(uname)" == "Darwin" ]]; then
-    _update_mac "$tag" "$latest" "$tmp"
+  if _version_lt "$installed" "$latest"; then
+    _warn "A new version is available. Run: brew upgrade --cask hightex"
   else
-    _update_linux "$tag" "$latest" "$tmp"
+    _ok "HighTex is already up to date."
+  fi
+}
+
+cmd_upgrade() {
+  local server="$CLI_SERVER"
+
+  for arg in "$@"; do
+    case "$arg" in
+      -m=*|--mirror=*) server="${arg#*=}" ;;
+    esac
+  done
+
+  server="${server%/}"
+
+  if [[ "$server" != "$CLI_SERVER" ]]; then
+    _warn "warning: using custom mirror $server"
+    read -r -p "Continue with this mirror? [y/N] " mirror_confirm
+    case "$mirror_confirm" in
+      y|Y|yes|YES|Yes) ;;
+      *) echo "Aborted."; exit 0 ;;
+    esac
   fi
 
-  echo "HighTex updated to ${latest}."
-}
+  echo "Checking CLI updates..."
+  printf '%sMirror%s : %s\n' "$C_DIM" "$C_RESET" "$server"
 
-_update_mac() {
-  local tag="$1" version="$2" tmp="$3"
-  local dmg="${tmp}/HighTex.dmg"
-  local url="https://github.com/${OWNER}/${REPO}/releases/download/${tag}/HighTex-Mac-${version}-Installer.dmg"
+  local json latest download
 
-  echo "Downloading ${url}..."
-  curl -L --progress-bar "$url" -o "$dmg"
+  json="$(curl -fsSL "$server/cli/latest")" || {
+    _err "error: unable to contact $server"
+    exit 1
+  }
 
-  echo "Mounting disk image..."
-  local mountpoint
-  mountpoint="$(hdiutil attach "$dmg" -nobrowse -noautoopen | grep '/Volumes/' | awk '{print $NF}')"
+  latest="$(printf '%s' "$json" | grep '"version"' | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
 
-  echo "Installing HighTex.app..."
-  rm -rf /Applications/HighTex.app
-  cp -R "${mountpoint}/HighTex.app" /Applications/HighTex.app
+  download="$(
+    printf '%s' "$json" |
+    sed -n 's/.*"download"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'
+  )";
 
-  echo "Removing quarantine attribute..."
-  xattr -cr /Applications/HighTex.app 2>/dev/null || true
+  download="$(normalize_url "$download")"
 
-  hdiutil detach "$mountpoint" -quiet
-}
+  [[ -n "$latest" && -n "$download" ]] || {
+    _err "error: invalid server response"
+    exit 1
+  }
 
-_update_linux() {
-  local tag="$1" version="$2" tmp="$3"
-  local appimage="${tmp}/HighTex.AppImage"
-  local url="https://github.com/${OWNER}/${REPO}/releases/download/${tag}/HighTex-Linux-${version}.AppImage"
-  local libexec
-  libexec="$(dirname "$(dirname "$(realpath "$0")")")/libexec"
+  printf '%sInstalled%s : %s\n' "$C_DIM" "$C_RESET" "$CLI_VERSION"
+  printf '%sLatest%s    : %s\n' "$C_DIM" "$C_RESET" "$latest"
 
-  echo "Downloading ${url}..."
-  curl -L --progress-bar "$url" -o "$appimage"
-  chmod 0755 "$appimage"
+  if ! _version_lt "$CLI_VERSION" "$latest"; then
+    _ok "CLI is already up to date."
+    exit 0
+  fi
 
-  echo "Installing..."
-  mv "$appimage" "${libexec}/HighTex.AppImage"
-  echo "$version" > "${libexec}/.hightex-version"
+  read -r -p "Upgrade CLI now? [y/N] " confirm
+  case "$confirm" in
+    y|Y|yes|YES|Yes) ;;
+    *) echo "Aborted."; exit 0 ;;
+  esac
+
+  local self tmp final
+
+  self="$(realpath "$0")"
+  tmp="$(mktemp)"
+  final="${self}.new"
+
+  cleanup() {
+    rm -f "$tmp" "$final" 2>/dev/null || true
+  }
+  trap cleanup EXIT
+
+  echo "Downloading..."
+  printf 'Download: %s\n' "$download"
+
+  curl -fL "$download" -o "$tmp" || {
+    _err "error: download failed"
+    exit 1
+  }
+
+  [[ -s "$tmp" ]] || {
+    _err "error: downloaded file is empty"
+    exit 1
+  }
+
+  chmod +x "$tmp"
+
+  mv "$tmp" "$final"
+  mv "$final" "$self"
+
+  chmod +x "$self"
+
+  echo
+  _ok "HighTex CLI upgraded to $latest"
 }
 
 cmd_version() {
-  local current
-  current="$(_installed_version)"
-  echo "HighTex ${current}"
+  echo "HighTex $(_installed_version)"
+  echo "Hightex-cli $CLI_VERSION"
+}
+
+cmd_documents() {
+  local exe
+  exe="$(_executeable)"
+
+  [[ -x "$exe" ]] || {
+    _err "error: HighTex executable not found at $exe"
+    exit 1
+  }
+
+  "$exe" documents "$@"
+}
+
+cmd_compile() {
+  local docId="${1:-}"
+  local saveTo="${2:-}"
+
+  local exe
+  exe="$(_executeable)"
+
+  [[ -x "$exe" ]] || {
+    _err "error: HighTex executable not found at $exe"
+    exit 1
+  }
+
+  if [[ -z "$docId" ]]; then
+    docId="$(_select_document "$exe")"
+  fi
+
+  _document_exists "$exe" "$docId" || {
+    _err "error: document '$docId' not found"
+    exit 1
+  }
+
+  if [[ -n "$saveTo" ]]; then
+    "$exe" compile "$docId" "$saveTo"
+  else
+    "$exe" compile "$docId"
+  fi
 }
 
 cmd_help() {
   cat <<EOF
-hightex - CLI companion for HighTex Desktop
+hightex - CLI
 
 Usage:
-  hightex             Open HighTex
-  hightex <command>
-
-Commands:
-  update     Check for a newer release and install it (no-op on pinned installs)
-  version    Print the current installed version
-  help       Print this help message
+  hightex open
+  hightex update
+  hightex upgrade
+  hightex version
+  hightex documents
+  hightex compile [docId] [saveTo]
 EOF
 }
 
+case "$(_installed_version)" in
+    unknown) _warn "Warning Application is Missing!";;
+esac
+
 case "${1:-open}" in
-  open)    cmd_open    ;;
-  update)  cmd_update  ;;
+  open) cmd_open ;;
+  update) cmd_update ;;
   version) cmd_version ;;
-  help|--help|-h) cmd_help ;;
+  help|-h|--help) cmd_help ;;
+  upgrade)
+    shift
+    cmd_upgrade "$@"
+    ;;
+  documents)
+    shift
+    cmd_documents "$@"
+    ;;
+  compile)
+    shift
+    cmd_compile "$@"
+    ;;
   *)
-    echo "error: unknown command '${1}'. Run 'hightex help' for usage." >&2
+    _err "error: unknown command '$1'"
     exit 1
     ;;
 esac
