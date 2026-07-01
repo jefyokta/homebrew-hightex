@@ -91,7 +91,7 @@ _arrow_select() {
     for i in "${!MENU_OPTIONS[@]}"; do
       printf '\033[2K' >&2
       if [[ $i -eq $selected ]]; then
-        printf '%s%s> %s%s\n' "$C_CYAN" "$C_BOLD" "${MENU_OPTIONS[$i]}" "$C_RESET" >&2
+        printf '%s%s→ %s%s\n' "$C_CYAN" "$C_BOLD" "${MENU_OPTIONS[$i]}" "$C_RESET" >&2
       else
         printf '  %s\n' "${MENU_OPTIONS[$i]}" >&2
       fi
