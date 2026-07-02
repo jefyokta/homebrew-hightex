@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CLI_VERSION="0.0.1"
+CLI_VERSION="0.0.2"
 CLI_SERVER="${HIGHTEX_SERVER:-https://hightex.jefyokta.my.id}"
 OWNER="jefyokta"
 REPO="hightex-desktop"
@@ -132,7 +132,7 @@ _select_document() {
   while IFS=$'\t' read -r id title; do
     [[ -z "$id" ]] && continue
     MENU_IDS+=("$id")
-    MENU_OPTIONS+=("$title ($id)")
+    MENU_OPTIONS+=("$title $C_DIM $id $C_RESET")
   done <<< "$output"
 
   [[ ${#MENU_IDS[@]} -gt 0 ]] || {
@@ -199,6 +199,17 @@ cmd_update() {
 
   if _version_lt "$installed" "$latest"; then
     _warn "A new version is available. Run: brew upgrade --cask hightex"
+    read -r -p "Upgrade now? [y/n] " update_confirm
+    case "$update_confirm" in
+      y|Y|yes|YES|Yes) ;;
+      *) echo "Aborted."; exit 0 ;;
+    esac
+    if [[ "$(uname)" == "Darwin" ]]; then
+      brew upgrade --cask hightex
+    else
+      brew upgrade higtex
+    fi
+      
   else
     _ok "HighTex is already up to date."
   fi
@@ -347,12 +358,12 @@ cmd_help() {
 hightex - CLI
 
 Usage:
-  hightex open
-  hightex update
-  hightex upgrade
-  hightex version
-  hightex documents
-  hightex compile [docId] [saveTo]
+  hightex open                      Open Hightex Desktop
+  hightex update                    Checking Hightex Desktop update
+  hightex upgrade                   Upgrading hightex-cli it self
+  hightex version                   Print version of Hightex Desktop and hightex-cli
+  hightex documents                 Get List of hightex documents
+  hightex compile [docId] [saveTo]  Compiling hightex document into pdf
 EOF
 }
 
@@ -363,7 +374,7 @@ esac
 case "${1:-open}" in
   open) cmd_open ;;
   update) cmd_update ;;
-  version) cmd_version ;;
+  version|-v|--version) cmd_version ;;
   help|-h|--help) cmd_help ;;
   upgrade)
     shift
