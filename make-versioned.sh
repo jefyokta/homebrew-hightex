@@ -102,7 +102,7 @@ RUBY
 echo "Writing ${FORMULA_OUT}..."
 cat > "$FORMULA_OUT" <<RUBY
 class ${CLASS_NAME} < Formula
-  desc "Desktop document editor for academic writing (pinned to v${VERSION})"
+  desc "Desktop document editor for academic writing"
   homepage "https://github.com/${OWNER}/${REPO}"
   version "${VERSION}"
   license "MIT"

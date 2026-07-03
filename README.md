@@ -27,10 +27,7 @@ brew install hightex@0.0.15          # Linux
 Pinned installs are frozen on purpose — `hightex update` will refuse to run
 on them. To move to a different version, uninstall and install the new pin,
 or switch to the unpinned `hightex` formula above.
-
-Only versions explicitly listed under [Available pinned versions](#available-pinned-versions)
-exist as installable formulas. If the version you want isn't listed, ask the
-maintainer to run `make-versioned.sh <version>`, or open an issue.
+If the version you want isn't listed, ask the maintainer to run `make-versioned.sh <version>`, or open an issue.
 
 ## Updating
 
@@ -69,9 +66,6 @@ sudo dnf install fuse        # Fedora / RHEL
 sudo pacman -S fuse2         # Arch
 ```
 
-## Available pinned versions
-
-- `hightex@0.0.9`
 
 ---
 
