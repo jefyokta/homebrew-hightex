@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CLI_VERSION="0.0.2"
+CLI_VERSION="0.0.3"
 CLI_SERVER="${HIGHTEX_SERVER:-https://hightex.jefyokta.my.id}"
 OWNER="jefyokta"
 REPO="hightex-desktop"
@@ -204,6 +204,9 @@ cmd_update() {
       y|Y|yes|YES|Yes) ;;
       *) echo "Aborted."; exit 0 ;;
     esac
+
+    brew update
+
     if [[ "$(uname)" == "Darwin" ]]; then
       brew upgrade --cask hightex
     else
@@ -236,7 +239,7 @@ cmd_upgrade() {
   fi
 
   echo "Checking CLI updates..."
-  printf '%sMirror%s : %s\n' "$C_DIM" "$C_RESET" "$server"
+  printf '%sMirror%s    : %s\n' "$C_DIM" "$C_RESET" "$server"
 
   local json latest download
 
@@ -309,8 +312,8 @@ cmd_upgrade() {
 }
 
 cmd_version() {
-  echo "HighTex $(_installed_version)"
-  echo "Hightex-cli $CLI_VERSION"
+  printf '%sHighTex%s     : %s\n' "$C_DIM" "$C_RESET" "$(_installed_version)"
+  printf '%sHightex-cli%s : %s\n' "$C_DIM" "$C_RESET" "$CLI_VERSION"
 }
 
 cmd_documents() {
@@ -353,6 +356,11 @@ cmd_compile() {
   fi
 }
 
+cmd_chan(){
+  echo "hightex-cli" $CLI_VERSION
+  echo "Fixing update issue"
+}
+
 cmd_help() {
   cat <<EOF
 hightex - CLI
@@ -388,6 +396,8 @@ case "${1:-open}" in
     shift
     cmd_compile "$@"
     ;;
+  chan)
+    cmd_chan ;;
   *)
     _err "error: unknown command '$1'"
     exit 1

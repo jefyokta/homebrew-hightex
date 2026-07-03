@@ -53,7 +53,6 @@ SHA_DMG="$(fetch_sha256 "$DMG_FILE")"
 SHA_APPIMAGE="$(fetch_sha256 "$APPIMAGE_FILE")"
 echo ""
 
-# Class name for the formula: HightexAT009 from "0.0.9"
 CLASS_SUFFIX="$(echo "$VERSION" | tr '.' '0' | tr -cd '0-9')"
 CLASS_NAME="HightexAT${CLASS_SUFFIX}"
 
@@ -66,7 +65,7 @@ cask "hightex@${VERSION}" do
   sha256 "${SHA_DMG}"
 
   name "HighTex"
-  desc "Desktop document editor for academic writing (pinned to v#{version})"
+  desc "Desktop document editor for academic writing "
   homepage "https://github.com/${OWNER}/${REPO}"
 
   livecheck do

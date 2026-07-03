@@ -20,8 +20,8 @@ needed.
 ### A specific version
 
 ```sh
-brew install --cask hightex@0.0.9   # macOS
-brew install hightex@0.0.9          # Linux
+brew install --cask hightex@0.0.15   # macOS
+brew install hightex@0.0.15          # Linux
 ```
 
 Pinned installs are frozen on purpose — `hightex update` will refuse to run
@@ -76,13 +76,6 @@ sudo pacman -S fuse2         # Arch
 ---
 
 ## For maintainers
-
-**After publishing a new GitHub release**, bump the latest-tracking files:
-```sh
-./update-tap.sh 0.0.11
-```
-This fetches the new release assets, computes SHA256 for each, patches
-`Casks/hightex.rb` and `Formula/hightex.rb`, and pushes.
 
 **To freeze a version as permanently installable** (in addition to the bump
 above, or independently for an older release):
