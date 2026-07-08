@@ -1,8 +1,8 @@
 cask "hightex" do
-  version "0.3.1"
+  version "0.3.2"
 
   url "https://github.com/jefyokta/hightex-desktop/releases/download/v#{version}/HighTex-Mac-#{version}-Installer.dmg"
-  sha256 "3b7903580157308e1a92ad6aa01c3a7bfb35dca938342b29068378fd8a18eaad"
+  sha256 "676096da0681b52259e1c9fb410d06abd9b290f51981eda28d0ade15dc8bacf0"
 
   name "HighTex"
   desc "Desktop document editor for academic writing"

@@ -13,7 +13,7 @@ cask "hightex@0.0.15" do
   end
 
   conflicts_with cask: "hightex"
-  depends_on macos: ">= :ventura"
+  depends_on macos: :ventura
 
   app "HighTex.app"
 
