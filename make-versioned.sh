@@ -143,7 +143,9 @@ RUBY
 echo ""
 echo "Committing..."
 cd "$DIR"
-git add "Casks/hightex@${VERSION}.rb" "Formula/hightex@${VERSION}.rb"
+cp "Casks/hightex@${VERSION}.rb" "Casks/hightex.rb"
+cp "Formula/hightex@${VERSION}.rb" "Formula/hightex@${VERSION}.rb"
+git add .
 git commit -m "add: pin hightex@${VERSION}"
 git push
 
