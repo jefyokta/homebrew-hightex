@@ -1,7 +1,7 @@
 class Hightex < Formula
   desc "Desktop document editor for academic writing"
   homepage "https://github.com/jefyokta/hightex-desktop"
-  version "0.4.1"
+  version "0.5.1"
   license "MIT"
 
   livecheck do
@@ -11,7 +11,7 @@ class Hightex < Formula
 
   on_linux do
     url "https://github.com/jefyokta/hightex-desktop/releases/download/v#{version}/HighTex-Linux-#{version}.AppImage"
-    sha256 "5bf5d7987fa9c01ce5d9bc70b1b48e1e13d8a526ddbd85efe6809926148f534e"
+    sha256 "54e5767f70634fd665b3616022acd0ad75984ff63cfc63a82cb4b6718bc540e6"
   end
 
   on_macos do
