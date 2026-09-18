@@ -144,7 +144,7 @@ echo ""
 echo "Committing..."
 cd "$DIR"
 cp "Casks/hightex@${VERSION}.rb" "Casks/hightex.rb"
-cp "Formula/hightex@${VERSION}.rb" "Formula/hightex@${VERSION}.rb"
+cp "Formula/hightex@${VERSION}.rb" "Formula/hightex.rb"
 git add .
 git commit -m "add: pin hightex@${VERSION}"
 git push
