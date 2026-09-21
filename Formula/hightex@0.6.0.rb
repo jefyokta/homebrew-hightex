@@ -1,4 +1,4 @@
-class HightexAT00600 < Formula
+class HightexAT0600 < Formula
   desc "Desktop document editor for academic writing"
   homepage "https://github.com/jefyokta/hightex-desktop"
   version "0.6.0"
