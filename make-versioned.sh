@@ -99,7 +99,7 @@ cask "hightex@${VERSION}" do
 
   binary "#{staged_path}/bin/hightex", target: "#{HOMEBREW_PREFIX}/bin/hightex"
 
-  postflight do
+  postflight_steps do
     system_command "/usr/bin/xattr",
       args: ["-cr", "{{appdir}}/HighTex.app"],
       sudo: false

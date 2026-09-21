@@ -22,7 +22,7 @@ cask "hightex@0.6.1" do
 
   postflight do
     system_command "/usr/bin/xattr",
-      args: ["-cr", "{{appdir}}/HighTex.app"],
+      args: ["-cr", "#{appdir}/HighTex.app"],
       sudo: false
   end
 
