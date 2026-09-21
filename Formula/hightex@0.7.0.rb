@@ -37,30 +37,24 @@ class HightexAT070 < Formula
         system "/usr/bin/xattr",
                "-cr",
                prefix/"HighTex.app"
-
-        (bin/"hightex@0.7.0").write <<~SH
-          #!/bin/sh
-          exec "#{prefix}/HighTex.app/Contents/MacOS/HighTex" "$@"
-        SH
-
-        chmod 0755, bin/"hightex@0.7.0"
       ensure
         system "/usr/bin/hdiutil", "detach", mountpoint
       end
     else
       libexec.install "HighTex-Linux-0.7.0.AppImage" => "HighTex.AppImage"
       chmod 0755, libexec/"HighTex.AppImage"
-
-      (bin/"hightex@0.7.0").write <<~SH
-        #!/bin/sh
-        exec "#{libexec}/HighTex.AppImage" "$@"
-      SH
-
-      chmod 0755, bin/"hightex@0.7.0"
     end
+
+    bin.install "../bin/hightex"
   end
 
   test do
-    assert_predicate bin/"hightex@0.7.0", :executable?
+    assert_predicate bin/"hightex", :executable?
+
+    if OS.mac?
+      assert_predicate prefix/"HighTex.app", :directory?
+    else
+      assert_predicate libexec/"HighTex.AppImage", :executable?
+    end
   end
 end
