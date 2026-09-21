@@ -1,4 +1,4 @@
-cask "hightex@0.7.0" do
+cask "hightex" do
   version "0.7.0"
 
   url "https://github.com/jefyokta/hightex-desktop/releases/download/v#{version}/HighTex-Mac-0.7.0-Installer.dmg"
