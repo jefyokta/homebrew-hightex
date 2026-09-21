@@ -10,7 +10,7 @@ class Hightex < Formula
 
   on_macos do
     url "https://github.com/jefyokta/hightex-desktop/releases/download/v#{version}/HighTex-Mac-0.7.0-Installer.zip"
-    sha256 "MAC_ZIP_SHA256"
+    sha256 "43f18f617a99b39b86d7a4d26184b2b39650c0af6790349fd2fc411554a2b4b7"
   end
 
   on_linux do
