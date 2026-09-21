@@ -20,7 +20,7 @@ class Hightex < Formula
 
   def install
     if OS.mac?
-      prefix.install "HighTex.app"
+      prefix.install Pathname.pwd => "HighTex.app"
 
       system "/usr/bin/xattr",
              "-cr",
@@ -32,11 +32,7 @@ class Hightex < Formula
       (libexec/".hightex-version").write version.to_s
     end
 
-    cli = path.dirname.parent/"bin/hightex"
-
-    odie "HighTex CLI not found at #{cli}" unless cli.file?
-
-    bin.install cli => "hightex"
+    bin.install tap.path/"bin/hightex"
   end
 
   test do
@@ -44,6 +40,7 @@ class Hightex < Formula
 
     if OS.mac?
       assert_predicate prefix/"HighTex.app", :directory?
+      assert_predicate prefix/"HighTex.app/Contents/MacOS/HighTex", :executable?
     else
       assert_predicate libexec/"HighTex.AppImage", :executable?
       assert_equal version.to_s, (libexec/".hightex-version").read.chomp
