@@ -6,4 +6,4 @@ git push
 
 brew untap jefyokta/hightex
 brew tap jefyokta/hightex
-brew install jefyokta/hightex/hightex
+brew install --cask jefyokta/hightex/hightex
