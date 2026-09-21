@@ -1,5 +1,7 @@
+```bash
 #!/usr/bin/env bash
 # make-versioned.sh
+#
 # Generate a pinned hightex@X.Y.Z Cask + Formula pair so users can install
 # a specific release that does not auto-update:
 #
@@ -33,30 +35,48 @@ if [[ -f "$CASK_OUT" ]]; then
   exit 1
 fi
 
+if [[ -f "$FORMULA_OUT" ]]; then
+  echo "error: ${FORMULA_OUT} already exists. Remove it first if you want to regenerate." >&2
+  exit 1
+fi
+
 fetch_sha256() {
   local filename="$1"
   local url="${BASE}/${filename}"
   local tmp="/tmp/hightex-pin-${filename}"
+
   printf "  %-55s" "${filename}" >&2
+
   if ! curl -fsSL -L "$url" -o "$tmp" 2>/dev/null; then
     echo " FAILED" >&2
     echo "error: could not download ${url}. Check that release ${TAG} exists." >&2
     exit 1
   fi
+
   shasum -a 256 "$tmp" | awk '{print $1}'
   rm -f "$tmp"
+
   echo " ok" >&2
 }
 
 echo "Fetching SHA256 for ${TAG}..."
+
 SHA_DMG="$(fetch_sha256 "$DMG_FILE")"
 SHA_APPIMAGE="$(fetch_sha256 "$APPIMAGE_FILE")"
+
 echo ""
 
-CLASS_SUFFIX="$(echo "$VERSION" | tr '.' '0' | tr -cd '0-9')"
+# Homebrew derives the versioned formula class from the formula name:
+#
+#   hightex@0.6.1.rb -> HightexAT061
+#   hightex@0.7.0.rb -> HightexAT070
+#
+# Remove dots instead of replacing them with zeroes.
+CLASS_SUFFIX="${VERSION//./}"
 CLASS_NAME="HightexAT${CLASS_SUFFIX}"
 
 echo "Writing ${CASK_OUT}..."
+
 cat > "$CASK_OUT" <<RUBY
 cask "hightex@${VERSION}" do
   version "${VERSION}"
@@ -65,7 +85,7 @@ cask "hightex@${VERSION}" do
   sha256 "${SHA_DMG}"
 
   name "HighTex"
-  desc "Desktop document editor for academic writing "
+  desc "Desktop document editor for academic writing"
   homepage "https://github.com/${OWNER}/${REPO}"
 
   livecheck do
@@ -77,8 +97,7 @@ cask "hightex@${VERSION}" do
 
   app "HighTex.app"
 
-  bin = "#{HOMEBREW_PREFIX}/bin/hightex"
-  binary "#{staged_path}/bin/hightex", target: bin
+  binary "#{staged_path}/bin/hightex", target: "#{HOMEBREW_PREFIX}/bin/hightex"
 
   postflight_steps do
     system_command "/usr/bin/xattr",
@@ -100,6 +119,7 @@ end
 RUBY
 
 echo "Writing ${FORMULA_OUT}..."
+
 cat > "$FORMULA_OUT" <<RUBY
 class ${CLASS_NAME} < Formula
   desc "Desktop document editor for academic writing"
@@ -127,6 +147,7 @@ class ${CLASS_NAME} < Formula
   def install
     libexec.install "${APPIMAGE_FILE}" => "HighTex.AppImage"
     chmod 0755, libexec/"HighTex.AppImage"
+
     (libexec/".hightex-version").write version.to_s
 
     bin.install buildpath/"bin/hightex" => "hightex@${VERSION}"
@@ -141,11 +162,19 @@ end
 RUBY
 
 echo ""
+echo "Validating generated files..."
+
+brew audit --strict --new-formula "$FORMULA_OUT"
+
+echo ""
 echo "Committing..."
+
 cd "$DIR"
-cp "Casks/hightex@${VERSION}.rb" "Casks/hightex.rb"
-cp "Formula/hightex@${VERSION}.rb" "Formula/hightex.rb"
-git add .
+
+git add \
+  "Casks/hightex@${VERSION}.rb" \
+  "Formula/hightex@${VERSION}.rb"
+
 git commit -m "add: pin hightex@${VERSION}"
 git push
 
@@ -154,3 +183,4 @@ echo "Done. Users can now install this exact version with:"
 echo ""
 echo "  brew install --cask hightex@${VERSION}   # macOS"
 echo "  brew install hightex@${VERSION}           # Linux"
+```
