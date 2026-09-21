@@ -9,7 +9,7 @@ class HightexAT070 < Formula
   end
 
   on_macos do
-    url "https://github.com/jefyokta/hightex-desktop/releases/download/v#{version}/HighTex-Mac-0.7.0.zip"
+    url "https://github.com/jefyokta/hightex-desktop/releases/download/v#{version}/HighTex-Mac-0.7.0-Installer.zip"
     sha256 "MAC_ZIP_SHA256"
   end
 
