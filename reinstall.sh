@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-brew uninstall jefyokta/hightex/hightex
+brew uninstall --cask jefyokta/hightex/hightex
 git add .
 git commit -m "dasds4t3q"
 git push

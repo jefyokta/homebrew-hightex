@@ -15,6 +15,7 @@ cask "hightex" do
   depends_on macos: :ventura
 
   app "HighTex.app"
+  binary "bin/hightex"
 
   postflight do
     system_command "/usr/bin/xattr",
