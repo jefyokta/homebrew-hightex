@@ -32,7 +32,12 @@ class Hightex < Formula
       (libexec/".hightex-version").write version.to_s
     end
 
-    bin.install tap.path/"bin/hightex"
+    cli = tap.path/"bin/hightex"
+
+    odie "HighTex CLI not found: #{cli}" unless cli.file?
+
+    FileUtils.cp cli, bin/"hightex"
+    chmod 0755, bin/"hightex"
   end
 
   test do
