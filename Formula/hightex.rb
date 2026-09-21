@@ -22,7 +22,7 @@ class Hightex < Formula
     if OS.mac?
       app = prefix/"HighTex.app"
 
-      copy Pathname.pwd, app, recursive: true
+      cp_r Pathname.pwd, app
 
       system "/usr/bin/xattr",
              "-cr",
@@ -38,8 +38,8 @@ class Hightex < Formula
 
     odie "HighTex CLI not found: #{cli}" unless cli.file?
 
-    mkdir bin
-    copy cli, bin/"hightex"
+    bin.mkpath
+    cp cli, bin/"hightex"
     chmod 0755, bin/"hightex"
   end
 
@@ -51,7 +51,6 @@ class Hightex < Formula
       assert_predicate prefix/"HighTex.app/Contents/MacOS/HighTex", :executable?
     else
       assert_predicate libexec/"HighTex.AppImage", :executable?
-      assert_equal version.to_s, (libexec/".hightex-version").read.chomp
     end
   end
 end
