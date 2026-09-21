@@ -18,8 +18,6 @@ class Hightex < Formula
     sha256 "658a92cac91d2c14f2621651029a4d216f365327b5efbc3e66a101673ce9db43"
   end
 
-  keg_only :versioned_formula
-
   def install
     if OS.mac?
       prefix.install "HighTex.app"
@@ -30,14 +28,25 @@ class Hightex < Formula
     else
       libexec.install "HighTex-Linux-0.7.0.AppImage" => "HighTex.AppImage"
       chmod 0755, libexec/"HighTex.AppImage"
+
+      (libexec/".hightex-version").write version.to_s
     end
+
+    cli = path.dirname.parent/"bin/hightex"
+
+    odie "HighTex CLI not found at #{cli}" unless cli.file?
+
+    bin.install cli => "hightex"
   end
 
   test do
+    assert_predicate bin/"hightex", :executable?
+
     if OS.mac?
       assert_predicate prefix/"HighTex.app", :directory?
     else
       assert_predicate libexec/"HighTex.AppImage", :executable?
+      assert_equal version.to_s, (libexec/".hightex-version").read.chomp
     end
   end
 end
