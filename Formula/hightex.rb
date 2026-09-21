@@ -20,11 +20,13 @@ class Hightex < Formula
 
   def install
     if OS.mac?
-      prefix.install Pathname.pwd => "HighTex.app"
+      app = prefix/"HighTex.app"
+
+      copy Pathname.pwd, app, recursive: true
 
       system "/usr/bin/xattr",
              "-cr",
-             prefix/"HighTex.app"
+             app
     else
       libexec.install "HighTex-Linux-0.7.0.AppImage" => "HighTex.AppImage"
       chmod 0755, libexec/"HighTex.AppImage"
@@ -36,8 +38,8 @@ class Hightex < Formula
 
     odie "HighTex CLI not found: #{cli}" unless cli.file?
 
-    bin.mkpath
-    FileUtils.cp cli, bin/"hightex"
+    mkdir bin
+    copy cli, bin/"hightex"
     chmod 0755, bin/"hightex"
   end
 
