@@ -36,6 +36,7 @@ class Hightex < Formula
 
     odie "HighTex CLI not found: #{cli}" unless cli.file?
 
+    bin.mkpath
     FileUtils.cp cli, bin/"hightex"
     chmod 0755, bin/"hightex"
   end
