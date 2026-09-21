@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-
+brew uninstall jefyokta/hightex/hightex
 git add .
-git commit -m "fasfad"
+git commit -m "dasds4t3q"
 git push
 
 brew untap jefyokta/hightex

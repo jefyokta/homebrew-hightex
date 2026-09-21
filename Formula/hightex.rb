@@ -19,28 +19,31 @@ class Hightex < Formula
   end
 
   def install
-    if OS.mac?
-      app = prefix/"HighTex.app"
+    cli = tap.path/"bin/hightex"
 
-      cp_r Pathname.pwd, app
+    odie "HighTex CLI not found: #{cli}" unless cli.file?
+
+    mkdir_p bin
+    cp cli, bin/"hightex"
+    chmod 0755, bin/"hightex"
+
+    if OS.mac?
+      cp_r Pathname.pwd, prefix/"HighTex.app"
 
       system "/usr/bin/xattr",
              "-cr",
-             app
+             prefix/"HighTex.app"
+
+      system "/bin/rm", "-rf", "/Applications/HighTex.app"
+      system "/bin/cp", "-R",
+             prefix/"HighTex.app",
+             "/Applications/HighTex.app"
     else
       libexec.install "HighTex-Linux-0.7.0.AppImage" => "HighTex.AppImage"
       chmod 0755, libexec/"HighTex.AppImage"
 
       (libexec/".hightex-version").write version.to_s
     end
-
-    cli = tap.path/"bin/hightex"
-
-    odie "HighTex CLI not found: #{cli}" unless cli.file?
-
-    bin.mkpath
-    cp cli, bin/"hightex"
-    chmod 0755, bin/"hightex"
   end
 
   test do
@@ -48,9 +51,10 @@ class Hightex < Formula
 
     if OS.mac?
       assert_predicate prefix/"HighTex.app", :directory?
-      assert_predicate prefix/"HighTex.app/Contents/MacOS/HighTex", :executable?
+      assert_predicate Pathname.new("/Applications/HighTex.app"), :directory?
     else
       assert_predicate libexec/"HighTex.AppImage", :executable?
+      assert_equal version.to_s, (libexec/".hightex-version").read.chomp
     end
   end
 end
