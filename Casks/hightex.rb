@@ -15,12 +15,30 @@ cask "hightex" do
   depends_on macos: :ventura
 
   app "HighTex.app"
-  binary "bin/hightex"
 
   postflight do
+    cli = cask.tap.path/"bin/hightex"
+    target = Pathname("#{HOMEBREW_PREFIX}/bin/hightex")
+
+    raise "HighTex CLI not found: #{cli}" unless cli.file?
+
+    system_command "/bin/cp",
+      args: [cli.to_s, target.to_s],
+      sudo: false
+
+    system_command "/bin/chmod",
+      args: ["0755", target.to_s],
+      sudo: false
+
     system_command "/usr/bin/xattr",
       args: ["-cr", "#{appdir}/HighTex.app"],
       sudo: false
+  end
+
+  uninstall_postflight do
+    target = Pathname("#{HOMEBREW_PREFIX}/bin/hightex")
+
+    target.delete if target.exist?
   end
 
   zap trash: [
